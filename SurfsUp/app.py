@@ -33,30 +33,52 @@ app = Flask(__name__)
 #################################################
 # Flask Routes
 #################################################
+#start at the homepage and list all the available routes
 @app.route("/")
 def home():
     """List all available api routes."""
     return (
+        f"Welcome to my Climate App"
+        f"<br>"
+        f"Precipitation:"
+        f"<br>"
         f"/api/v1.0/precipitation<br/>"
-        f"<br/>"
+        f"<br>"
+        f"stations:"
+        f"<br>"
         f"/api/v1.0/stations<br/>"
-        f"<br/>"
+        f"<br>"
+        f"tobs:"
+        f"<br>"
         f"/api/v1.0/tobs<br/>"
-        f"<br/>"
+        f"<br>"
+        f"tobs:"
+        f"<br>"
+        f"the minimum, average, and maximum of the Tobs:"
+        f"<br>"
+        f"After a given date:"
+        f"<br>"
         f"/api/v1.0/start<br/>"
-        f"<br/>"
+        f"<br>"
+        f"Between two given dates:"
+        f"<br>"
         f"/api/v1.0/start/end<br/>"
 
     )
-    
+
+#Convert a query results from  retrieving only the last 12 months of data to a dictionary using date as the key and prcp as the value.    
 @app.route("/api/v1.0/precipitation")   
 def precipitation():   
+    
     # Calculate the date one year from the last date in data set.
     lasty = dt.date(2017, 8, 23)-dt.timedelta(days=365)
+    
     # Perform a query to retrieve the data and precipitation scores
     dp = session.query(measurement.date, measurement.prcp).filter(measurement.date>=lasty).all()
+    
+    #close the session
     session.close()
-
+    
     # Create a dictionary
     list_d = []
     for date, prcp, in dp:
@@ -64,14 +86,20 @@ def precipitation():
         date_dict["date"] = date
         date_dict["prcp"] = prcp
         list_d.append(date_dict)
+        
+    #Return the JSON representation of the dictionary
     return jsonify(list_d)
 
-
+#Return a JSON list of stations from the dataset
 @app.route("/api/v1.0/stations")
 def st():  
+    
+    #query the database to get station information
     st = session.query(station.station,station.name,station.latitude,station.longitude,station.elevation).all()
+    
+    #close the session
     session.close()  
-    # Convert list of tuples into normal list
+    
     # Convert list of tuples into a list of dictionaries
     list_st = []
     for s in st:
@@ -83,53 +111,73 @@ def st():
             "elevation": s[4]
         }
         list_st.append(station_dict)
-
+        
+    #jsonify and return the result
     return jsonify(list_st)
 
+#Query the dates and temperature observations of the most-active station for the previous year of data.
 @app.route("/api/v1.0/tobs")
 def tobs():
-    lasty = dt.date(2017, 8, 23)-dt.timedelta(days=365)    
+    
+    #calculate the date one year ago from  (August 23, 2017)
+    lasty = dt.date(2017, 8, 23)-dt.timedelta(days=365)  
+    
+    #query the database to get temperature observations (tobs) for the most-active station 'USC00519281' for the previous year of data. 
     tob = session.query(measurement.tobs,measurement.date).\
         filter(measurement.station == 'USC00519281').filter(measurement.date>=lasty).all()
+        
+    #close the session
     session.close()
-    # Convert list of tuples into a list
+    
+    #convert the result to a list  
     list_tob = [{"tobs": t[0], "date": t[1]} for t in tob]
+    
+    #jsonify and return the result
     return jsonify(list_tob)
  
 #Return a JSON list of the minimum temperature, the average temperature, and the maximum temperature for a specified start date range 
 #defines an API endpoint that accepts one parameters for a specified start date
 @app.route("/api/v1.0/<start>")
 def starting(start):
+    
     #convert the start date to datetime objects 
     start_date= dt.datetime.strptime(start, '%Y-%m-%d')
+    
     #request to calculate the minimum, average, and maximum of the Tobs between the given date and the last date in the dataset
     date_mes = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
         filter(measurement.date >= start_date).all()
+        
     #close the session
     session.close() 
+    
     #convert the result to a list  
-    list_date_mes = list(np.ravel(date_mes))
+    list_m = [{"min": t[0], "average": t[1], "max": t[2]} for t in date_mes]
+    
     #jsonify and return the result
-    return jsonify(list_date_mes)
-
+    return jsonify(list_m)
 
 
 #Return a JSON list of the minimum temperature, the average temperature, and the maximum temperature for a specified start-end dates range 
 #defines an API endpoint that accepts two parameters for a specified start date and end date
 @app.route("/api/v1.0/<start>/<end>")
 def start_end(start,end): 
+    
     #convert the start and end dates to datetime objects    
     start_date= dt.datetime.strptime(start, '%Y-%m-%d')
     end_date= dt.datetime.strptime(end,'%Y-%m-%d')
+    
     #request to calculate the minimum, average, and maximum of the Tobs between the two dates
     date_mes = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
         filter(measurement.date >= start).filter(measurement.date <= end).all()
+        
     #close the session
     session.close() 
+     
     #convert the result to a list  
-    list_date_mes = list(np.ravel(date_mes))
+    list_m = [{"min": t[0], "average": t[1], "max": t[2]} for t in date_mes]
+    
     #jsonify and return the result
-    return jsonify(list_date_mes)
+    return jsonify(list_m)
 
 #run the Flask app
 if __name__ == "__main__":
