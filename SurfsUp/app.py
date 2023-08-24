@@ -8,6 +8,7 @@ import datetime as dt
 import datetime as dt
 import numpy as np
 import pandas as pd
+import datetime
 #################################################
 # Database Setup
 #################################################
@@ -36,33 +37,26 @@ app = Flask(__name__)
 #start at the homepage and list all the available routes
 @app.route("/")
 def home():
-    """List all available api routes."""
+   
     return (
-        f"Welcome to my Climate App"
-        f"<br>"
-        f"Precipitation:"
-        f"<br>"
-        f"/api/v1.0/precipitation<br/>"
-        f"<br>"
-        f"stations:"
-        f"<br>"
-        f"/api/v1.0/stations<br/>"
-        f"<br>"
-        f"tobs:"
-        f"<br>"
-        f"/api/v1.0/tobs<br/>"
-        f"<br>"
-        f"tobs:"
-        f"<br>"
-        f"the minimum, average, and maximum of the Tobs:"
-        f"<br>"
-        f"After a given date:"
-        f"<br>"
-        f"/api/v1.0/start<br/>"
-        f"<br>"
-        f"Between two given dates:"
-        f"<br>"
-        f"/api/v1.0/start/end<br/>"
+        "<html>"
+        "<body>"
+        "<h1>Welcome Hawaii Climate API</h1>"
+        
+        "<h3>Precipitation:</h3>"
+        "<p>/api/v1.0/precipitation</p>"
+        
+        "<h3>Stations:</h3>"
+        "<p>/api/v1.0/stations</p>"
+        
+        "<h3>Temperature Observations:</h3>"
+        "<p>/api/v1.0/tobs</p>"
+        
+        "<h3>Minimum, average, and maximum of the temperature for a specified start or start-end range:</h3>"
+        "<p>/api/v1.0/start/end</p>"
+        
+        "</body>"
+        "</html>"
 
     )
 
@@ -115,7 +109,7 @@ def st():
     #jsonify and return the result
     return jsonify(list_st)
 
-#Query the dates and temperature observations of the most-active station for the previous year of data.
+#query the dates and temperature observations of the most-active station for the previous year of data.
 @app.route("/api/v1.0/tobs")
 def tobs():
     
@@ -135,49 +129,50 @@ def tobs():
     #jsonify and return the result
     return jsonify(list_tob)
  
-#Return a JSON list of the minimum temperature, the average temperature, and the maximum temperature for a specified start date range 
-#defines an API endpoint that accepts one parameters for a specified start date
+
+#return a JSON list of the minimum temperature, the average temperature, and the maximum temperature for a specified start-end dates range 
+#defines an API endpoint that can accept one or two parameters for a specified start or start-end range
 @app.route("/api/v1.0/<start>")
-def starting(start):
-    
-    #convert the start date to datetime objects 
-    start_date= dt.datetime.strptime(start, '%Y-%m-%d')
-    
-    #request to calculate the minimum, average, and maximum of the Tobs between the given date and the last date in the dataset
-    date_mes = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
-        filter(measurement.date >= start_date).all()
-        
-    #close the session
-    session.close() 
-    
-    #convert the result to a list  
-    list_m = [{"min": t[0], "average": t[1], "max": t[2]} for t in date_mes]
-    
-    #jsonify and return the result
-    return jsonify(list_m)
-
-
-#Return a JSON list of the minimum temperature, the average temperature, and the maximum temperature for a specified start-end dates range 
-#defines an API endpoint that accepts two parameters for a specified start date and end date
 @app.route("/api/v1.0/<start>/<end>")
-def start_end(start,end): 
-    
-    #convert the start and end dates to datetime objects    
-    start_date= dt.datetime.strptime(start, '%Y-%m-%d')
-    end_date= dt.datetime.strptime(end,'%Y-%m-%d')
-    
-    #request to calculate the minimum, average, and maximum of the Tobs between the two dates
-    date_mes = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
-        filter(measurement.date >= start).filter(measurement.date <= end).all()
+def start_end(start="", end=""):
+    #use a try to look for invalid start date format
+    try:
+        #convert start to datetime
+        start_date = dt.datetime.strptime(start, '%Y-%m-%d')
         
-    #close the session
-    session.close() 
-     
-    #convert the result to a list  
-    list_m = [{"min": t[0], "average": t[1], "max": t[2]} for t in date_mes]
+        #if the user gives an end date
+        if len(end) > 0:
+            
+            #convert end to datetime
+            end_date = dt.datetime.strptime(end, '%Y-%m-%d')
+            
+            #query to calculate min, avg, and max Tobs between start and end
+            sel = [func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)]
+            date_mes = session.query(*sel).\
+                filter(measurement.date >= start).\
+                filter(measurement.date <= end).all()
+            
+                
+        #if the user doesn't give an end date
+        else:
+            #query to calculate min, avg, and max Tobs from start to last date
+            sel = [func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)]
+            date_mes = session.query(*sel).\
+                filter(measurement.date >= start).all()
+           
+        
+        #close the session
+        session.close() 
+        
+        #convert the query result to a list of dictionaries
+        list_m = [{"min": t[0], "average": t[1], "max": t[2]} for t in date_mes]
+        
+        #return the JSON response
+        return jsonify(list_m)
     
-    #jsonify and return the result
-    return jsonify(list_m)
+    except ValueError:
+        return jsonify({"error": "Invalid date format"})
+
 
 #run the Flask app
 if __name__ == "__main__":
