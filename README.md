@@ -355,12 +355,12 @@ if __name__ == "__main__":
 ### Hint:
 In order of verification and using the learned tools, I used MS Excel to verify with a sample from hawaii_measurements table.
 
-Results of the Min Max and Average of the temperature between start date: 2010-02-08 and end date: 2010-02-09
+Results of the Min, Max and Average of the temperature between start date: 2010-02-08 and end date: 2010-02-09
 <img src='start-end-flask.png' style ='width:700px;height:300px'/>  <img src='start-end-excel.png' style ='width:700px;height:300px'/>
 
 
 
-Results of the Min Max and Average of the temperature from start date: 2017-08-01 to last date: 2017-08-23
+Results of the Min, Max and Average of the temperature from start date: 2017-08-01 to last date: 2017-08-23
 
 <img src='start-flask.png' style ='width:700px;height:300px'/>  <img src='start-excel.png' style ='width:700px;height:300px'/>
 
